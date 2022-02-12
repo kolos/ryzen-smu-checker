@@ -95,7 +95,7 @@
         var fileInput = document.getElementById('fileInput');
         fileInput.addEventListener('change', function(e) {
           var file = fileInput.files[0];
-          if(file.name.match(/zip$/)) {
+          if(file.name.match(/zip$/i)) {
             JSZip.loadAsync(file).then(function(zip) {
               var files = zip.file(/^(?!.*(txt|doc|exe|bat)$).*$/i);
 
