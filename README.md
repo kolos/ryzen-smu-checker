@@ -1,7 +1,8 @@
 # Ryzen SMU Checker
 
-Upload Ryzen BIOS files to compare versions.
+Open Ryzen BIOS files to compare versions.
 
+https://kolos.github.io/ryzen-smu-checker/
 
 ## Screenshot
 ![Screenshot](screenshot.png)
