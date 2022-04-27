@@ -16,6 +16,7 @@
         border-collapse: collapse;
         margin: auto;
         width: 100%;
+        margin-bottom: 1em;
       }
       tr:nth-child(2n) {
         background-color: rgb(90, 85, 83);
@@ -115,6 +116,34 @@
             fileReader.readAsArrayBuffer(file);
           }
         });
+    }
+
+    var copyToClipboard = function() {
+      var header_prefix = ["FileName", "AGESA"];
+      var cpu_types = cpu_patterns.map(d => d.name);
+
+      if(Object.keys(parsed_files).length < 1) {
+        alert("Nothing to copy. Add BIOS files first.");
+        return;
+      }
+
+      var markdown = "|" + header_prefix.concat(cpu_types).join("|") + "|\n" + "|-".repeat(header_prefix.length + cpu_types.length) + "|\n";
+      Object.keys(parsed_files).forEach(function(filename) {
+        var row = [
+          filename,
+          parsed_files[filename]["agesa"]
+        ];
+
+        cpu_types.forEach(function(cpu_type) {
+          row.push(parsed_files[filename]["versions"][cpu_type] || "-");
+        })
+
+        markdown += "|" + row.join("|") + "|\n";
+      });
+
+      navigator.clipboard.writeText(markdown).then(() => {
+        alert('Copied to clipboard successfully.');
+      });
     }
 
     var refreshTable = function() {
@@ -271,6 +300,7 @@
 
       <table id="table">
       </table>
+      <button onclick="copyToClipboard()">Copy to clipboard</button>
     </div>
 
     <div class="footer">
