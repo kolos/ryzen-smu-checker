@@ -221,8 +221,8 @@
 
       var agesa = "3D 9B 25 70 41 47 45 53 41";
       var idx = searchPattern(buff, agesa, 13);
-      if(idx.length > 0) {
-        var agesa_string = getString(buff, idx[0]);
+      if(idx > -1) {
+        var agesa_string = getString(buff, idx);
 
         var matches = agesa_string.match(/^(.+)\s(\d\..+)$/);
         if(matches) {
@@ -233,7 +233,7 @@
       /*
       var chipset = "5F 50 54 5F";
       var idx = searchPattern(buff, chipset);
-      if(idx.length > 0) {
+      if(idx > -1) {
         var release_date = new Date(2000 + getByteHex(buff, 140), getByteHex(buff, 141) -1, getByteHex(buff, 142));
         var fw_version = `${getByteHexStr(buff, 143)}.${getByteHexStr(buff, 144)}.${getByteHexStr(buff, 145)}`;
         var fw_string = getString(buff, 147);
@@ -245,12 +245,10 @@
 
       cpu_patterns.forEach(function(cpu) {
         var idx = searchPattern(buff, cpu.pattern, cpu.offset);
-        if(idx.length > 0) {
-          idx.forEach(function(i) {
-            var smu_version = `${buff[ i + 2 ]}.${buff[ i + 1 ]}`;
+        if(idx > -1) {
+          var smu_version = `${buff[ idx + 2 ]}.${buff[ idx + 1 ]}`;
 
-            addVersion(last_file_name, cpu.name, smu_version);
-          })
+          addVersion(last_file_name, cpu.name, smu_version);
         }
       });
     }
@@ -258,12 +256,11 @@
     var searchPattern = function(buff, pattern_str, offset = 0) {
       var pattern = pattern_str.split(" ").map(function(hex) { return parseInt(hex, 16); });
 
-      var matches = [];          
       var j;
       for(var i = 0; i < buff.length; ) {
         for(j = 0; j < pattern.length; i++, j++) {
           if(buff[i] == pattern[j] || isNaN(pattern[j]) ) {
-            if(j == pattern.length -1) matches.push(i - j + offset);
+            if(j == pattern.length -1) return (i - j + offset);
             continue;
           }
           
@@ -272,7 +269,7 @@
         }
       }
 
-      return matches;
+      return -1;
     }
 
     var getString = function(buff, start) {
