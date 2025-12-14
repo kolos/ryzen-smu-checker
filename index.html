@@ -73,6 +73,7 @@
       var last_file_name = "";
       var parsed_files = {};
       var highest_versions = {};
+      var agesa_pattern = "3D 9B 25 70 41 47 45 53 41";
       var cpu_patterns = [
         {"name": "Summit Ridge", "desc": "1x00 CPU", "pattern": "01 00 00 00 00 00 00 00 00 00 00 ? 19 00 00 00 00", "offset": 10},
         {"name": "Pinnacle Ridge", "desc": "2x00 CPU", "pattern": "01 00 00 00 00 ? 00 00 00 00 00 ? 2B 00 00 00 00", "offset": 10},
@@ -90,7 +91,45 @@
         {"name": "Krackan", "desc": "xxx APU", "pattern": "01 10 02 82 00 00 00 00 00 ? 65 00 00 00 00 00 00 00 00 00", "offset": 8},
       ];
 
+      var agesa_pattern_compiled = null;
+      var compilePattern = function(pattern_str) {
+        var tokens = pattern_str.trim().split(/\s+/);
+        var bytes = new Uint8Array(tokens.length);
+        var mask = new Uint8Array(tokens.length);
+
+        // Use the right-most non-wildcard byte as an anchor for fast skipping.
+        var anchorIndex = -1;
+        for (var i = 0; i < tokens.length; i++) {
+          var t = tokens[i];
+          if (t.indexOf("?") !== -1) {
+            bytes[i] = 0;
+            mask[i] = 0;
+          } else {
+            bytes[i] = parseInt(t, 16);
+            mask[i] = 1;
+            anchorIndex = i;
+          }
+        }
+
+        return {
+          bytes: bytes,
+          mask: mask,
+          length: bytes.length,
+          anchorIndex: anchorIndex,
+          anchorByte: bytes[anchorIndex],
+        };
+      }
+
+      var compileAllPatterns = function() {
+        agesa_pattern_compiled = compilePattern(agesa_pattern);
+        cpu_patterns.forEach(function(cpu) {
+          cpu.compiled = compilePattern(cpu.pattern);
+        });
+      }
+
       window.onload = function() {
+        compileAllPatterns();
+
         var fileReader = new FileReader();
         fileReader.onload = function(e) {
           parseFile(e.target.result);
@@ -219,8 +258,7 @@
     var parseFile = function(arrayBuff) {
       var buff = new Uint8Array(arrayBuff);
 
-      var agesa = "3D 9B 25 70 41 47 45 53 41";
-      var idx = searchPattern(buff, agesa, 13);
+      var idx = searchPatternCompiled(buff, agesa_pattern_compiled, 13);
       if(idx > -1) {
         var agesa_string = getString(buff, idx);
 
@@ -244,7 +282,7 @@
       */
 
       cpu_patterns.forEach(function(cpu) {
-        var idx = searchPattern(buff, cpu.pattern, cpu.offset);
+        var idx = searchPatternCompiled(buff, cpu.compiled, cpu.offset);
         if(idx > -1) {
           var smu_version = `${buff[ idx + 2 ]}.${buff[ idx + 1 ]}`;
 
@@ -253,23 +291,33 @@
       });
     }
 
-    var searchPattern = function(buff, pattern_str, offset = 0) {
-      var pattern = pattern_str.split(" ").map(function(hex) { return parseInt(hex, 16); });
+    var searchPatternCompiled = function(buff, compiled, offset = 0) {
+      var bytes = compiled.bytes;
+      var mask = compiled.mask;
+      var m = compiled.length;
+      var anchorIndex = compiled.anchorIndex;
+      var anchorByte = compiled.anchorByte;
 
-      var j;
-      for(var i = 0; i < buff.length; ) {
-        for(j = 0; j < pattern.length; i++, j++) {
-          if(buff[i] == pattern[j] || isNaN(pattern[j]) ) {
-            if(j == pattern.length -1) return (i - j + offset);
-            continue;
+      // Find occurrences of the anchor byte using native indexOf, then verify full pattern.
+      var from = 0;
+      while (true) {
+        var idx = buff.indexOf(anchorByte, from + anchorIndex);
+        if (idx === -1) return -1;
+
+        var start = idx - anchorIndex;
+        if (start + m > buff.length) return -1;
+
+        var ok = true;
+        for (var j = 0; j < m; j++) {
+          if (mask[j] && buff[start + j] !== bytes[j]) {
+            ok = false;
+            break;
           }
-          
-          i++;
-          break;
         }
-      }
+        if (ok) return start + offset;
 
-      return -1;
+        from = start + 1;
+      }
     }
 
     var getString = function(buff, start) {
