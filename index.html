@@ -82,7 +82,12 @@
         {"name": "Matisse", "desc": "3xx0 CPU", "pattern": "2E 00 FF FF FF FF 00", "offset": -2},
         {"name": "Renoir", "desc": "4xx0 APU", "pattern": "37 00 FF FF FF FF 00", "offset": -2},
         {"name": "Vermeer", "desc": "5xx0 CPU", "pattern": "38 00 FF FF FF FF 00", "offset": -2},
-        {"name": "Cezanne", "desc": "5xx0 APU", "pattern": "01 00 00 00 00 00 ? 40 00 FF FF FF FF", "offset": 5}
+        {"name": "Cezanne", "desc": "5xx0 APU", "pattern": "40 00 FF FF FF FF 00", "offset": -2},
+
+        {"name": "Raphael", "desc": "7xxx CPU", "pattern": "01 10 01 81 00 00 00 00 00 ? 4c 00 00 00 00 00 00 00 00 00", "offset": 8},
+        {"name": "Phoenix", "desc": "8xxx APU", "pattern": "01 10 01 81 00 00 00 00 ? ? 54 ? 00 00 00 00 00 00 00 00", "offset": 8},
+        {"name": "Granite", "desc": "9xxx CPU", "pattern": "01 10 01 81 00 00 00 00 00 ? 62 00 00 00 00 00 00 00 00 00", "offset": 8},
+        {"name": "Krackan", "desc": "xxx APU", "pattern": "01 10 02 82 00 00 00 00 00 ? 65 00 00 00 00 00 00 00 00 00", "offset": 8},
       ];
 
       window.onload = function() {
