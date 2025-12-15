@@ -2,79 +2,176 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ryzen SMU Checker</title>
+
+    <meta name="description" content="Ryzen SMU Checker is a simple in-browser tool to read AGESA and SMU versions from AMD Ryzen BIOS files. Supports AM4 and AM5 BIOSes and lets you compare multiple files." />
+    <meta name="keywords" content="Ryzen, AMD, BIOS, AGESA, SMU, SMU version, AM4, AM5, UEFI, firmware, Vermeer, Matisse, Raphael, Phoenix" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="https://kolos.github.io/ryzen-smu-checker/" />
+
+    <meta property="og:title" content="Ryzen SMU Checker" />
+    <meta property="og:description" content="Read AGESA and SMU versions from Ryzen BIOS files (AM4/AM5) directly in your browser." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://kolos.github.io/ryzen-smu-checker/" />
+
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Ryzen SMU Checker" />
+    <meta name="twitter:description" content="Read AGESA and SMU versions from Ryzen BIOS files (AM4/AM5) directly in your browser." />
+
+    <meta name="theme-color" content="#111827" />
     
     <style>
       body {
-        background-color: #302f20;
-        font-family: Arial, Helvetica, sans-serif;
-        color: white;
-
+        background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        color: #e5e7eb;
+        margin: 0;
       }
-      #table{
-        border: 1px solid grey;
-        border-collapse: collapse;
-        margin: auto;
+
+      a { color: inherit; }
+
+      table{
         width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.65);
         margin-bottom: 1em;
       }
+
       tr:nth-child(2n) {
-        background-color: rgb(90, 85, 83);
-      } 
-      tr:nth-child(2n+1) {
-        background-color: rgb(112, 103, 100);
+        background-color: rgba(148, 163, 184, 0.06);
       }
+
+      tr:nth-child(2n+1) {
+        background-color: rgba(148, 163, 184, 0.03);
+      }
+
       td {
         text-align: center;
         padding: 10px;
-        border: 1px solid grey;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+        border-right: 1px solid rgba(148, 163, 184, 0.12);
       }
+
+      tr:last-child td { border-bottom: none; }
+      td:last-child { border-right: none; }
+
       .name {
         font-size: 1.2em;
-        
       }
+
       .desc {
-        color: turquoise;
+        color: #a5b4fc;
+        font-size: 0.9em;
       }
 
       td.highest{
-        
+        font-weight: 700;
+        color: #34d399;
       }
 
       td.lower{
-        color: grey;
+        color: rgba(229, 231, 235, 0.65);
       }
 
       .file-input{
-        background-color: lightslategray;
-        border: 1px solid grey;
-        display: inline-block;
-        margin-bottom: 10px;
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
       }
 
       .content {
-        width: 1300px;
-        margin: auto;
+        max-width: 1300px;
+        margin: 0 auto;
         text-align: center;
-        padding: 20px 0 20px 0;
+        padding: 22px 16px 20px 16px;
       }
 
       .header {
         text-align: center;
-        font-size: 2em;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        padding: 18px 16px 0 16px;
       }
+
+      .subheader {
+        text-align: center;
+        font-size: 1rem;
+        color: rgba(229, 231, 235, 0.75);
+        padding: 6px 16px 0 16px;
+      }
+
+      .section {
+        text-align: left;
+        background: rgba(15, 23, 42, 0.35);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        padding: 14px 14px 4px 14px;
+        margin-top: 14px;
+        display: none;
+      }
+
+      .section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        padding: 2px 2px 10px 2px;
+        text-align: left;
+      }
+
+      button {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button:hover { filter: brightness(1.05); }
 
       .footer {
         text-align: center;
+        color: rgba(229, 231, 235, 0.6);
+        padding: 18px 16px 22px 16px;
+      }
+
+      #progressContainer {
+        max-width: 1300px;
+        margin: 0 auto 12px auto;
+        text-align: left;
+        display: none;
+      }
+
+      #progressLabel {
+        margin-bottom: 4px;
+      }
+
+      #progressBar {
+        width: 100%;
+        height: 14px;
       }
     </style>
     <script src="https://unpkg.com/jszip@3.7.1/dist/jszip.js" type="text/javascript"></script>
     <script>
       var last_file_name = "";
       var parsed_files = {};
-      var highest_versions = {};
+      var highest_versions = {
+        "AM4": {},
+        "AM5": {},
+      };
       var agesa_pattern = "3D 9B 25 70 41 47 45 53 41";
-      var cpu_patterns = [
+      var cpu_patterns_am4 = [
         {"name": "Summit Ridge", "desc": "1x00 CPU", "pattern": "01 00 00 00 00 00 00 00 00 00 00 ? 19 00 00 00 00", "offset": 10},
         {"name": "Pinnacle Ridge", "desc": "2x00 CPU", "pattern": "01 00 00 00 00 ? 00 00 00 00 00 ? 2B 00 00 00 00", "offset": 10},
         {"name": "Raven Ridge", "desc": "2x00 APU", "pattern": "1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF 03", "offset": -6},
@@ -85,6 +182,9 @@
         {"name": "Vermeer", "desc": "5xx0 CPU", "pattern": "38 00 FF FF FF FF 00", "offset": -2},
         {"name": "Cezanne", "desc": "5xx0 APU", "pattern": "40 00 FF FF FF FF 00", "offset": -2},
 
+      ];
+
+      var cpu_patterns_am5 = [
         {"name": "Raphael", "desc": "7xxx CPU", "pattern": "01 10 01 81 00 00 00 00 00 ? 4c 00 00 00 00 00 00 00 00 00", "offset": 8},
         {"name": "Phoenix", "desc": "8xxx APU", "pattern": "01 10 01 81 00 00 00 00 ? ? 54 ? 00 00 00 00 00 00 00 00", "offset": 8},
         {"name": "Granite", "desc": "9xxx CPU", "pattern": "01 10 01 81 00 00 00 00 00 ? 62 00 00 00 00 00 00 00 00 00", "offset": 8},
@@ -122,40 +222,136 @@
 
       var compileAllPatterns = function() {
         agesa_pattern_compiled = compilePattern(agesa_pattern);
-        cpu_patterns.forEach(function(cpu) {
+        cpu_patterns_am4.forEach(function(cpu) {
           cpu.compiled = compilePattern(cpu.pattern);
         });
+        cpu_patterns_am5.forEach(function(cpu) {
+          cpu.compiled = compilePattern(cpu.pattern);
+        });
+      }
+
+      var getSocketCpuPatterns = function(socket) {
+        if (socket === "AM5") return cpu_patterns_am5;
+        return cpu_patterns_am4;
+      }
+
+      var setProgressVisible = function(visible) {
+        var el = document.getElementById('progressContainer');
+        el.style.display = visible ? "block" : "none";
+      }
+
+      var setProgress = function(label, percent) {
+        var progressLabel = document.getElementById('progressLabel');
+        var progressBar = document.getElementById('progressBar');
+
+        progressLabel.textContent = label || "";
+        if (typeof percent === "number" && isFinite(percent)) {
+          progressBar.removeAttribute('indeterminate');
+          progressBar.value = Math.max(0, Math.min(100, percent));
+        } else {
+          // Indeterminate: keep value at 0.
+          progressBar.value = 0;
+        }
+      }
+
+      var detectSocket = function(buff) {
+        // BIOS files won't mix sockets, so detect once and skip the other pattern set.
+        // Try AM5 first (few patterns), then AM4.
+        for (var i = 0; i < cpu_patterns_am5.length; i++) {
+          var cpu5 = cpu_patterns_am5[i];
+          if (searchPatternCompiled(buff, cpu5.compiled, 0) > -1) return "AM5";
+        }
+        for (var j = 0; j < cpu_patterns_am4.length; j++) {
+          var cpu4 = cpu_patterns_am4[j];
+          if (searchPatternCompiled(buff, cpu4.compiled, 0) > -1) return "AM4";
+        }
+        return "AM4";
+      }
+
+      var compareSmuVersions = function(a, b) {
+        // Compare dotted numeric versions like "76.102" vs "76.99" correctly.
+        if (a == null && b == null) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+
+        var ap = String(a).split('.').map(function(x) { return parseInt(x, 10) || 0; });
+        var bp = String(b).split('.').map(function(x) { return parseInt(x, 10) || 0; });
+        var len = Math.max(ap.length, bp.length);
+        for (var i = 0; i < len; i++) {
+          var av = ap[i] || 0;
+          var bv = bp[i] || 0;
+          if (av > bv) return 1;
+          if (av < bv) return -1;
+        }
+        return 0;
+      }
+
+      var formatSmuVersion = function(majorByte, minorByte) {
+        var major = Number(majorByte);
+        var minor = Number(minorByte);
+        var minorStr = String(minor);
+        if (minor >= 0 && minor < 10) minorStr = "0" + minorStr;
+        return String(major) + "." + minorStr;
       }
 
       window.onload = function() {
         compileAllPatterns();
 
         var fileReader = new FileReader();
+        fileReader.onprogress = function(e) {
+          if (e.lengthComputable) {
+            setProgressVisible(true);
+            var pct = (e.loaded / e.total) * 100;
+            setProgress("Reading file... " + Math.round(pct) + "%", pct);
+          }
+        }
         fileReader.onload = function(e) {
           parseFile(e.target.result);
 
-          refreshTable();
+          refreshTables();
+          setProgressVisible(false);
         }
         
         var fileInput = document.getElementById('fileInput');
         fileInput.addEventListener('change', function(e) {
           var file = fileInput.files[0];
           if(file.name.match(/zip$/i)) {
+            setProgressVisible(true);
+            setProgress("Opening zip...", null);
             JSZip.loadAsync(file).then(function(zip) {
-              var files = zip.file(/^(?!.*(txt|doc|exe|bat)$).*$/i);
+              // Only keep likely BIOS payloads; exclude common non-BIOS extras.
+              var files = zip.file(/^(?!.*(txt|doc|exe|bat|efi|pdf|nsh)$).*$/i);
 
-              if(files.length != 1) return null;
+              if(files.length != 1) {
+                alert("Zip must contain exactly 1 BIOS file.");
+                setProgressVisible(false);
+                return null;
+              }
               
               last_file_name = files[0].name.split("/").pop();
               return files[0];
             }).then(function(file) {
-              file.async("blob").then(function(content) {
-                fileReader.readAsArrayBuffer(content);
+              if (!file) return;
+              setProgressVisible(true);
+              setProgress("Unzipping... 0%", 0);
+              file.async("arraybuffer", function(meta) {
+                if (meta && typeof meta.percent === "number") {
+                  setProgressVisible(true);
+                  var p = Math.max(0, Math.min(100, meta.percent));
+                  setProgress("Unzipping... " + Math.round(p) + "%", p);
+                }
+              }).then(function(arrayBuff) {
+                parseFile(arrayBuff);
+                refreshTables();
+                setProgressVisible(false);
               });
             });
           }
           else {
             last_file_name = file.name;
+
+            setProgressVisible(true);
+            setProgress("Reading file... 0%", 0);
 
             fileReader.readAsArrayBuffer(file);
           }
@@ -163,100 +359,138 @@
     }
 
     var copyToClipboard = function() {
-      var header_prefix = ["FileName", "AGESA"];
-      var cpu_types = cpu_patterns.map(d => d.name);
-
       if(Object.keys(parsed_files).length < 1) {
         alert("Nothing to copy. Add BIOS files first.");
         return;
       }
 
-      var markdown = "|" + header_prefix.concat(cpu_types).join("|") + "|\n" + "|-".repeat(header_prefix.length + cpu_types.length) + "|\n";
-      Object.keys(parsed_files).forEach(function(filename) {
-        var row = [
-          filename,
-          parsed_files[filename]["agesa"]
-        ];
+      var buildTable = function(socket) {
+        var header_prefix = ["FileName", "AGESA"];
+        var cpu_types = getSocketCpuPatterns(socket).map(d => d.name);
 
-        cpu_types.forEach(function(cpu_type) {
-          row.push(parsed_files[filename]["versions"][cpu_type] || "-");
-        })
+        var filenames = Object.keys(parsed_files).filter(function(filename) {
+          return parsed_files[filename]["socket"] === socket;
+        });
 
-        markdown += "|" + row.join("|") + "|\n";
-      });
+        if (filenames.length < 1) return "";
+
+        var markdown = `### ${socket}\n`;
+        markdown += "|" + header_prefix.concat(cpu_types).join("|") + "|\n";
+        markdown += "|-".repeat(header_prefix.length + cpu_types.length) + "|\n";
+
+        filenames.forEach(function(filename) {
+          var row = [
+            filename,
+            parsed_files[filename]["agesa"],
+          ];
+
+          cpu_types.forEach(function(cpu_type) {
+            row.push(parsed_files[filename]["versions"][cpu_type] || "-");
+          });
+
+          markdown += "|" + row.join("|") + "|\n";
+        });
+        return markdown + "\n";
+      }
+
+      var markdown = buildTable("AM4") + buildTable("AM5");
 
       navigator.clipboard.writeText(markdown).then(() => {
         alert('Copied to clipboard successfully.');
       });
     }
 
-    var refreshTable = function() {
-      var table = document.getElementById('table');
-      var table_html = "<tr>";
-      table_html += "<td>File</td>";
-      table_html += "<td>AGESA</td>";
-      cpu_patterns.forEach(function(cpu) {
-        table_html += `<td><div class="name">${cpu.name}</div><div class="desc">${cpu.desc}</div></td>`;
-      });
-      table_html += "<tr>";
+    var refreshTables = function() {
+      var copyButton = document.getElementById('copyButton');
+      copyButton.style.display = Object.keys(parsed_files).length > 0 ? "inline-block" : "none";
 
-      Object.keys(parsed_files).forEach(function(filename) {
-        var table_row = "<tr>";
-        table_row += `<td>${filename}</td>`;
-        table_row += `<td>${parsed_files[filename]["agesa"]}</td>`;
-        cpu_patterns.forEach(function(d) {
-          if(d.name in parsed_files[filename]["versions"]) {
-            if(highest_versions[d.name] == parsed_files[filename]["versions"][d.name]) {
-              table_row += `<td class="highest">${parsed_files[filename]["versions"][d.name]}</td>`;
-            } else {
-              table_row += `<td class="lower">${parsed_files[filename]["versions"][d.name]}</td>`;
-            }
-          }
-          else {
-            table_row += "<td>-</td>";
-          }
+      var renderSocketTable = function(socket, tableId) {
+        var table = document.getElementById(tableId);
+        var patterns = getSocketCpuPatterns(socket);
+
+        var table_html = "<tr>";
+        table_html += "<td>File</td>";
+        table_html += "<td>AGESA</td>";
+        patterns.forEach(function(cpu) {
+          table_html += `<td><div class="name">${cpu.name}</div><div class="desc">${cpu.desc}</div></td>`;
         });
-        table_row += `</tr>`;
-        table_html += table_row;
+        table_html += "</tr>";
 
-      });
-      table.innerHTML = table_html;
+        var filenames = Object.keys(parsed_files).filter(function(filename) {
+          return parsed_files[filename]["socket"] === socket;
+        });
+
+        var sectionEl = document.getElementById(socket === "AM4" ? "section-am4" : "section-am5");
+        sectionEl.style.display = filenames.length > 0 ? "block" : "none";
+
+        filenames.forEach(function(filename) {
+          var table_row = "<tr>";
+          table_row += `<td>${filename}</td>`;
+          table_row += `<td>${parsed_files[filename]["agesa"]}</td>`;
+          patterns.forEach(function(d) {
+            if(d.name in parsed_files[filename]["versions"]) {
+              if(highest_versions[socket][d.name] == parsed_files[filename]["versions"][d.name]) {
+                table_row += `<td class="highest">${parsed_files[filename]["versions"][d.name]}</td>`;
+              } else {
+                table_row += `<td class="lower">${parsed_files[filename]["versions"][d.name]}</td>`;
+              }
+            }
+            else {
+              table_row += "<td>-</td>";
+            }
+          });
+          table_row += `</tr>`;
+          table_html += table_row;
+        });
+
+        table.innerHTML = table_html;
+      }
+
+      renderSocketTable("AM4", "table-am4");
+      renderSocketTable("AM5", "table-am5");
     }
 
-    var addAgesa = function(filename, agesa) {
+    var ensureParsedFile = function(filename) {
       if(! (filename in parsed_files)) parsed_files[filename] = {
         "versions": {},
         "agesa": "-",
         "chipset": "-",
+        "socket": "AM4",
       };
+    }
+
+    var addAgesa = function(filename, agesa) {
+      ensureParsedFile(filename);
 
       parsed_files[filename]["agesa"] = agesa;
     }
 
     var addChipset = function(filename, chipset) {
-      if(! (filename in parsed_files)) parsed_files[filename] = {
-        "versions": {},
-        "agesa": "-",
-        "chipset": "-",
-      };
+      ensureParsedFile(filename);
 
       parsed_files[filename]["chipset"] = chipset;
     }
 
-    var addVersion = function(filename, cpu, version) {
-      if(! (filename in parsed_files)) parsed_files[filename] = {
-        "versions": {},
-        "agesa": "-",
-        "chipset": "-",
-      };
+    var addSocket = function(filename, socket) {
+      ensureParsedFile(filename);
+      parsed_files[filename]["socket"] = socket;
+    }
+
+    var addVersion = function(filename, socket, cpu, version) {
+      ensureParsedFile(filename);
       parsed_files[filename]["versions"][cpu] = version;
 
-      if(!(cpu in highest_versions) || highest_versions[cpu] < version) highest_versions[cpu] = version;
+      if(!(cpu in highest_versions[socket]) || compareSmuVersions(version, highest_versions[socket][cpu]) > 0) {
+        highest_versions[socket][cpu] = version;
+      }
     }
 
 
     var parseFile = function(arrayBuff) {
       var buff = new Uint8Array(arrayBuff);
+
+      var socket = detectSocket(buff);
+      addSocket(last_file_name, socket);
 
       var idx = searchPatternCompiled(buff, agesa_pattern_compiled, 13);
       if(idx > -1) {
@@ -281,12 +515,13 @@
       }
       */
 
-      cpu_patterns.forEach(function(cpu) {
+      var patterns = getSocketCpuPatterns(socket);
+      patterns.forEach(function(cpu) {
         var idx = searchPatternCompiled(buff, cpu.compiled, cpu.offset);
         if(idx > -1) {
-          var smu_version = `${buff[ idx + 2 ]}.${buff[ idx + 1 ]}`;
+          var smu_version = formatSmuVersion(buff[ idx + 2 ], buff[ idx + 1 ]);
 
-          addVersion(last_file_name, cpu.name, smu_version);
+          addVersion(last_file_name, socket, cpu.name, smu_version);
         }
       });
     }
@@ -343,14 +578,29 @@
     <div class="header">
       Ryzen SMU Checker
     </div>
+    <div class="subheader">
+      Drop in a BIOS file (or a zip with one BIOS file) to read SMU versions.
+    </div>
     <div class="content">
       <div class="file-input">
-        Add BIOS file: <input type="file" id="fileInput"/>
+        <span>Add BIOS file:</span> <input type="file" id="fileInput"/>
       </div>
 
-      <table id="table">
-      </table>
-      <button onclick="copyToClipboard()">Copy to clipboard</button>
+      <div id="progressContainer">
+        <div id="progressLabel"></div>
+        <progress id="progressBar" max="100" value="0"></progress>
+      </div>
+
+      <div id="section-am4" class="section">
+        <div class="section-title">AM4</div>
+        <table id="table-am4"></table>
+      </div>
+
+      <div id="section-am5" class="section">
+        <div class="section-title">AM5</div>
+        <table id="table-am5"></table>
+      </div>
+      <button id="copyButton" style="display:none;margin-top: 1em;" onclick="copyToClipboard()">Copy to clipboard</button>
     </div>
 
     <div class="footer">
